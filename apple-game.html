@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-start {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-start:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .btn-reset {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .timer {
+            font-size: 1.2rem;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-top: 30px;
+            min-height: 400px;
+        }
+
+        .apple {
+            aspect-ratio: 1;
+            background: #ff6b6b;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            border: 3px solid transparent;
+        }
+
+        .apple::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 15px;
+            background: #8b4513;
+            border-radius: 50% 50% 0 0;
+        }
+
+        .apple::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 20%;
+            width: 15px;
+            height: 15px;
+            background: #ffd700;
+            border-radius: 50%;
+            opacity: 0.3;
+        }
+
+        .apple:hover:not(.removed) {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+        .apple.active {
+            border-color: #f1c40f;
+            background: #ff4757;
+            transform: scale(1.15);
+            box-shadow: 0 0 20px rgba(241, 196, 15, 0.8);
+        }
+
+        .apple.removing {
+            animation: disappear 0.5s ease-out forwards;
+        }
+
+        .apple.removed {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            cursor: default;
+        }
+
+        @keyframes disappear {
+            0% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.5) rotate(180deg);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(0) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .game-message {
+            text-align: center;
+            font-size: 1.5rem;
+            color: #e74c3c;
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 30px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .score {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #2c3e50;
+            margin-top: 20px;
+        }
+
+        .mission-clear {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 5rem;
+            font-weight: bold;
+            color: #f1c40f;
+            text-shadow: 
+                0 0 10px rgba(241, 196, 15, 0.8),
+                0 0 20px rgba(241, 196, 15, 0.6),
+                0 0 30px rgba(241, 196, 15, 0.4),
+                3px 3px 6px rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            display: none;
+        }
+
+        @keyframes missionClearAnimation {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.3) rotate(-10deg);
+            }
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.2) rotate(5deg);
+            }
+            70% {
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            }
+            85% {
+                transform: translate(-50%, -50%) scale(1.05) rotate(0deg);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            }
+        }
+
+        @keyframes sparkle {
+            0%, 100% {
+                text-shadow: 
+                    0 0 10px rgba(241, 196, 15, 0.8),
+                    0 0 20px rgba(241, 196, 15, 0.6),
+                    0 0 30px rgba(241, 196, 15, 0.4),
+                    3px 3px 6px rgba(0, 0, 0, 0.5);
+            }
+            50% {
+                text-shadow: 
+                    0 0 20px rgba(241, 196, 15, 1),
+                    0 0 40px rgba(241, 196, 15, 0.8),
+                    0 0 60px rgba(241, 196, 15, 0.6),
+                    0 0 80px rgba(255, 215, 0, 0.4),
+                    3px 3px 6px rgba(0, 0, 0, 0.5);
+            }
+        }
+
+        .mission-clear.visible {
+            display: block;
+            visibility: visible;
+            animation: missionClearAnimation 1.5s ease-out forwards,
+                       sparkle 2s ease-in-out infinite 1.5s;
+        }
+
+        @media (max-width: 768px) {
+            .mission-clear {
+                font-size: 3rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .mission-clear {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>Apple game</h1>
+            <div class="controls">
+                <div class="buttons">
+                    <button class="btn-start" id="startBtn">게임 시작</button>
+                    <button class="btn-reset" id="resetBtn">리셋</button>
+                </div>
+                <div class="timer" id="timer">00:00</div>
+            </div>
+        </div>
+        
+        <div class="game-board" id="gameBoard"></div>
+        <div class="game-message" id="gameMessage"></div>
+        <div class="score" id="score">점수: 0</div>
+    </div>
+    <div class="mission-clear" id="missionClear">Mission Clear!</div>
+
+    <script>
+        let gameState = {
+            apples: [],
+            activeApples: new Set(),
+            isPlaying: false,
+            timer: null,
+            startTime: null,
+            score: 0
+        };
+
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const gameBoard = document.getElementById('gameBoard');
+        const timerDisplay = document.getElementById('timer');
+        const gameMessage = document.getElementById('gameMessage');
+        const scoreDisplay = document.getElementById('score');
+        const missionClear = document.getElementById('missionClear');
+
+        // 게임 시작
+        startBtn.addEventListener('click', () => {
+            if (gameState.isPlaying) return;
+            
+            gameState.isPlaying = true;
+            gameState.startTime = Date.now();
+            gameState.score = 0;
+            gameState.activeApples.clear();
+            gameMessage.textContent = '';
+            scoreDisplay.textContent = '점수: 0';
+            
+            // Mission Clear 메시지 숨기기
+            missionClear.classList.remove('visible');
+            missionClear.style.animation = 'none';
+            setTimeout(() => {
+                missionClear.style.animation = '';
+            }, 10);
+            
+            createApples();
+            startTimer();
+            startBtn.disabled = true;
+        });
+
+        // 리셋
+        resetBtn.addEventListener('click', () => {
+            resetGame();
+        });
+
+        // 사과 생성
+        function createApples() {
+            gameBoard.innerHTML = '';
+            gameState.apples = [];
+            
+            for (let i = 0; i < 25; i++) {
+                const apple = document.createElement('div');
+                apple.className = 'apple';
+                const number = Math.floor(Math.random() * 9) + 1;
+                apple.textContent = number;
+                apple.dataset.index = i;
+                apple.dataset.number = number;
+                
+                apple.addEventListener('click', () => toggleApple(i));
+                
+                gameBoard.appendChild(apple);
+                gameState.apples.push({
+                    element: apple,
+                    number: number,
+                    active: false,
+                    removed: false
+                });
+            }
+        }
+
+        // 사과 활성화/비활성화
+        function toggleApple(index) {
+            if (!gameState.isPlaying || gameState.apples[index].removed) return;
+            
+            const apple = gameState.apples[index];
+            apple.active = !apple.active;
+            
+            if (apple.active) {
+                apple.element.classList.add('active');
+                gameState.activeApples.add(index);
+            } else {
+                apple.element.classList.remove('active');
+                gameState.activeApples.delete(index);
+            }
+            
+            checkSum();
+        }
+
+        // 합이 10인지 확인
+        function checkSum() {
+            const activeNumbers = Array.from(gameState.activeApples).map(
+                idx => gameState.apples[idx].number
+            );
+            const sum = activeNumbers.reduce((a, b) => a + b, 0);
+            
+            if (sum === 10) {
+                removeApples(Array.from(gameState.activeApples));
+                gameState.activeApples.clear();
+                gameState.score += 10;
+                scoreDisplay.textContent = `점수: ${gameState.score}`;
+                
+                // 게임 종료 확인
+                setTimeout(() => {
+                    if (!canMakeTen()) {
+                        endGame();
+                    }
+                }, 600);
+            }
+        }
+
+        // 사과 제거 (특수효과)
+        function removeApples(indices) {
+            indices.forEach(index => {
+                const apple = gameState.apples[index];
+                apple.removed = true;
+                apple.element.classList.add('removing');
+                apple.element.classList.remove('active');
+                
+                // 클릭 이벤트 완전히 제거
+                apple.element.style.pointerEvents = 'none';
+                apple.element.onclick = null;
+                
+                setTimeout(() => {
+                    // DOM에서 제거하지 않고, 자리를 유지하면서 투명하게 만듦
+                    apple.element.classList.remove('removing');
+                    apple.element.classList.add('removed');
+                    // 숫자는 그대로 유지 (textContent 변경하지 않음)
+                }, 500);
+            });
+        }
+
+        // 10을 만들 수 있는지 확인
+        function canMakeTen() {
+            const availableNumbers = gameState.apples
+                .map((apple, idx) => apple.removed ? null : { number: apple.number, index: idx })
+                .filter(item => item !== null);
+            
+            // 간단한 조합 확인 (1-9 숫자이므로 가능한 조합들)
+            const numbers = availableNumbers.map(item => item.number);
+            
+            // 단일 숫자 10은 불가능 (1-9만 있음)
+            // 두 숫자 조합 확인
+            for (let i = 0; i < numbers.length; i++) {
+                for (let j = i + 1; j < numbers.length; j++) {
+                    if (numbers[i] + numbers[j] === 10) return true;
+                }
+            }
+            
+            // 세 숫자 조합 확인
+            for (let i = 0; i < numbers.length; i++) {
+                for (let j = i + 1; j < numbers.length; j++) {
+                    for (let k = j + 1; k < numbers.length; k++) {
+                        if (numbers[i] + numbers[j] + numbers[k] === 10) return true;
+                    }
+                }
+            }
+            
+            // 네 숫자 이상 조합도 확인 (1+1+1+7, 1+2+3+4 등)
+            // 더 많은 조합을 확인하기 위해 재귀적 접근
+            return checkCombinations(numbers, 0, 0);
+        }
+
+        // 조합 확인 (재귀)
+        function checkCombinations(numbers, start, currentSum) {
+            if (currentSum === 10) return true;
+            if (currentSum > 10) return false;
+            
+            for (let i = start; i < numbers.length; i++) {
+                if (checkCombinations(numbers, i + 1, currentSum + numbers[i])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 게임 종료
+        function endGame() {
+            gameState.isPlaying = false;
+            stopTimer();
+            gameMessage.textContent = '게임 종료! 더 이상 10을 만들 수 없습니다.';
+            startBtn.disabled = false;
+            
+            // Mission Clear 메시지 표시
+            missionClear.classList.add('visible');
+        }
+
+        // 타이머 시작
+        function startTimer() {
+            gameState.timer = setInterval(() => {
+                if (!gameState.isPlaying) return;
+                
+                const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const seconds = (elapsed % 60).toString().padStart(2, '0');
+                timerDisplay.textContent = `${minutes}:${seconds}`;
+            }, 1000);
+        }
+
+        // 타이머 중지
+        function stopTimer() {
+            if (gameState.timer) {
+                clearInterval(gameState.timer);
+                gameState.timer = null;
+            }
+        }
+
+        // 게임 리셋
+        function resetGame() {
+            gameState.isPlaying = false;
+            gameState.activeApples.clear();
+            gameState.score = 0;
+            stopTimer();
+            timerDisplay.textContent = '00:00';
+            gameMessage.textContent = '';
+            scoreDisplay.textContent = '점수: 0';
+            gameBoard.innerHTML = '';
+            startBtn.disabled = false;
+            
+            // Mission Clear 메시지 숨기기
+            missionClear.classList.remove('visible');
+            missionClear.style.animation = 'none';
+            setTimeout(() => {
+                missionClear.style.animation = '';
+            }, 10);
+        }
+    </script>
+</body>
+</html>
